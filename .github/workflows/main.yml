@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Walaat Nar APK
 
 on:
   workflow_dispatch:
@@ -14,6 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Extract Android project
+        run: |
+          unzip -q walaat_nar_android_installable_build.zip -d project
+          echo "Project files:"
+          find project -name "settings.gradle.kts" -o -name "settings.gradle"
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -22,15 +28,23 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: Build APK
-        working-directory: walaat_nar_android
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          SETTINGS=$(find project -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1)
+          if [ -z "$SETTINGS" ]; then
+            echo "Could not find Android project settings file."
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "Building from: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: walaat-nar-debug-apk
-          path: walaat_nar_android/app/build/outputs/apk/debug/*.apk
+          name: Walaat-Nar-APK
+          path: project/**/build/outputs/apk/debug/*.apk
